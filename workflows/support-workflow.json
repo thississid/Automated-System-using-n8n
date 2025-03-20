@@ -1,0 +1,69 @@
+{
+    "nodes": [
+      {
+        "name": "Webhook Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "parameters": {
+          "path": "customer-query",
+          "httpMethod": "POST",
+          "responseMode": "onReceived"
+        },
+        "position": [
+          250,
+          300
+        ]
+      },
+      {
+        "name": "Query Support API",
+        "type": "n8n-nodes-base.httpRequest",
+        "parameters": {
+          "url": "http://localhost:8000/support",
+          "method": "POST",
+          "jsonParameters": true,
+          "bodyParametersJson": "={\n  \"query\": $json[\"query\"]\n}"
+        },
+        "position": [
+          500,
+          300
+        ]
+      },
+      {
+        "name": "Send Response",
+        "type": "n8n-nodes-base.emailSend",
+        "parameters": {
+          "to": "={{$json[\"email\"]}}",
+          "subject": "Support Response",
+          "body": "={{$json[\"response\"]}}"
+        },
+        "position": [
+          750,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook Trigger": {
+        "main": [
+          [
+            {
+              "node": "Query Support API",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Query Support API": {
+        "main": [
+          [
+            {
+              "node": "Send Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    }
+  }
+  
