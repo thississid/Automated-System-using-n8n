@@ -1,33 +1,46 @@
-from fastapi import FastAPI, Request
-import ollama
-import pinecone
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain_ollama import Ollama
+from langchain.chains.question_answering import load_qa_chain
+from langchain.prompts import PromptTemplate
 
 app = FastAPI()
 
-# Initialize Pinecone for Knowledge Base
-pinecone.init(api_key="your_pinecone_api_key", environment="your_env")
-index = pinecone.Index("support-db")
+# Initialize the Ollama LLM
+llm = Ollama(model="mistral")
+
+# Initialize the knowledge base (FAISS vector store)
+documents = [
+    {"page_content": "Example support document content."},
+    # Add more documents as needed
+]
+embedding_model = OpenAIEmbeddings()
+vector_store = FAISS.from_documents(documents, embedding_model)
+
+# Define the prompt template
+prompt_template = PromptTemplate(
+    input_variables=["context", "question"],
+    template="Context: {context}\n\nQuestion: {question}\n\nAnswer:"
+)
+
+# Load the QA chain
+qa_chain = load_qa_chain(llm, chain_type="stuff", prompt=prompt_template)
+
+class Query(BaseModel):
+    question: str
 
 @app.post("/support")
-async def process_query(request: Request):
-    data = await request.json()
-    user_query = data["query"]
+async def get_support_response(query: Query):
+    # Retrieve similar documents
+    similar_docs = vector_store.similarity_search(query.question, k=3)
+    context = "\n".join([doc.page_content for doc in similar_docs])
 
-    # Step 1: Check past support tickets using Pinecone
-    search_results = index.query(user_query, top_k=3, include_metadata=True)
+    # Generate the response using the QA chain
+    answer = qa_chain.run(input_documents=similar_docs, question=query.question)
 
-    if search_results["matches"]:
-        relevant_answers = [match["metadata"]["solution"] for match in search_results["matches"]]
+    if answer:
+        return {"answer": answer.strip()}
     else:
-        relevant_answers = ["No past solutions found."]
-
-    # Step 2: Generate a response using Ollama
-    response = ollama.chat(
-        model="mistral",
-        messages=[
-            {"role": "system", "content": "You are a helpful AI assistant for customer support."},
-            {"role": "user", "content": f"Query: {user_query}\nPast Solutions: {relevant_answers}"}
-        ]
-    )
-
-    return {"response": response["message"]}
+        raise HTTPException(status_code=500, detail="LLM service error")

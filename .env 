@@ -1,1 +1,8 @@
-codes.txt
+N8N_EMAIL_MODE=smtp
+N8N_SMTP_HOST=smtp.example.com
+N8N_SMTP_PORT=587
+N8N_SMTP_USER=your-email@example.com
+N8N_SMTP_PASS=your-email-password
+N8N_SMTP_SENDER=Your Name <your-email@example.com>
+N8N_SMTP_SSL=false
+N8N_SMTP_STARTTLS=true

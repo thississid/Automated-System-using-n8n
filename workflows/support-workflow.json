@@ -1,69 +1,67 @@
 {
-    "nodes": [
-      {
-        "name": "Webhook Trigger",
-        "type": "n8n-nodes-base.webhook",
-        "parameters": {
-          "path": "customer-query",
-          "httpMethod": "POST",
-          "responseMode": "onReceived"
-        },
-        "position": [
-          250,
-          300
-        ]
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-query",
+        "responseMode": "onReceived",
+        "responseData": {
+          "responseBody": "Query received successfully."
+        }
       },
-      {
-        "name": "Query Support API",
-        "type": "n8n-nodes-base.httpRequest",
-        "parameters": {
-          "url": "http://localhost:8000/support",
-          "method": "POST",
-          "jsonParameters": true,
-          "bodyParametersJson": "={\n  \"query\": $json[\"query\"]\n}"
-        },
-        "position": [
-          500,
-          300
-        ]
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://backend:8000/support",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={ \"question\": $json[\"query\"] }"
       },
-      {
-        "name": "Send Response",
-        "type": "n8n-nodes-base.emailSend",
-        "parameters": {
-          "to": "={{$json[\"email\"]}}",
-          "subject": "Support Response",
-          "body": "={{$json[\"response\"]}}"
-        },
-        "position": [
-          750,
-          300
-        ]
-      }
-    ],
-    "connections": {
-      "Webhook Trigger": {
-        "main": [
-          [
-            {
-              "node": "Query Support API",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "your-email@example.com",
+        "toEmail": "={{$json[\"email\"]}}",
+        "subject": "Support Response",
+        "text": "={{$node[\"HTTP Request\"].json[\"answer\"]}}"
       },
-      "Query Support API": {
-        "main": [
-          [
-            {
-              "node": "Send Response",
-              "type": "main",
-              "index": 0
-            }
-          ]
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
         ]
-      }
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   }
-  
+}
